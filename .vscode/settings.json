@@ -1,0 +1,4 @@
+{
+    "powershell.codeFormatting.preset": "OTBS",
+    "editor.formatOnSave": true
+}
