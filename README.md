@@ -25,3 +25,6 @@ This cmdlet allows you to test two things
 
 # Contributing
 Please feel free to help out by either creating issues, or solving them. 
+
+# Kudos
+Documentation and Code on Unreal can be found here: https://www.etc.cmu.edu/projects/coyote210/Docs/undox/IpServer.UdpServerUplink.html#L22
