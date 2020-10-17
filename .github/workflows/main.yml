@@ -27,7 +27,7 @@ jobs:
         with:
           # PowerShell script to execute in Actions-hydrated context
           script: |
-            $moduleDir = . build\build.ps1
+            $moduleDir = . .\build\build.ps1
             Set-ActionVariable MODULE_DIR $moduleDir
 
       - name: Publish PowerShell Module
