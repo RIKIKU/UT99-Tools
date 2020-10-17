@@ -151,8 +151,8 @@ function Get-UtMasterServerEndpointList {
             
                     while ($stream.DataAvailable -eq $false) {
                         if ($IpString.tostring() -match 'final') { break }
-                        Write-Verbose "hit sleep at line 154"
-                        Start-Sleep -m 10
+                        Write-Verbose "waiting for data"
+                        Start-Sleep -m 20
                     }
                 }while ( $stream.DataAvailable ) 
                 Write-Verbose "Processing Ip Address List."
