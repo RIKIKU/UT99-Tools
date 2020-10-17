@@ -11,9 +11,6 @@ function Find-UtLanServers {
         [Byte[]] $sendQueryBytes = $encoding.GetBytes("REPORTQUERY");
         8777..8786 | ForEach-Object { $udpClient.Send($sendQueryBytes, $sendQueryBytes.Length, [IPEndPoint]::new([IPAddress]::Broadcast, $_)) | Out-Null }
         
-        #new Testing
-        <# [System.AsyncCallback]::new($recv)
-        $udpClient.BeginReceive($recv, $state) #>
         while ($true) {
             $ServerEndpoint = [IPEndpoint]::new([ipaddress]::Any, 0)
             [Byte[]] $receiveBytes = $udpClient.Receive([ref]$ServerEndpoint)
@@ -34,6 +31,7 @@ function Find-UtLanServers {
         }
     } finally {
         $udpClient.Close()
+        $udpClient.Dispose()
         
     }
 }
