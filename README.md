@@ -2,9 +2,9 @@
 PowerShell tools for troubleshooting Unreal Tournament 99 Servers.
 
 
-#Cmdlets
+# Cmdlets
 
-##Get-UtMasterServerEndpointList
+## Get-UtMasterServerEndpointList
 
 Retrieves a list of IP Endpoints from master servers. It's useful for testing if your UT99 game server is successfully announcing its presence to a master server. 
         
