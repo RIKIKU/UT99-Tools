@@ -112,32 +112,26 @@ function Get-UtMasterServerEndpointList {
        
             try {
                 Write-Verbose "Attempting connection to host"
-                $socket = New-Object System.Net.Sockets.TcpClient( $Address, $port )
+                $tcpClient = New-Object System.Net.Sockets.TcpClient( $Address, $port )
+                $tcpClient.Client.ReceiveTimeout = 5000
+                $tcpClient.Client.SendTimeout = 5000
             } catch {
                 Write-Error -Message $_.Exception.Message -Exception $_.Exception -ErrorAction Stop
             }
 
 
-            $stream = $socket.GetStream( )
+            $stream = $tcpClient.GetStream( )
             $writer = New-Object System.IO.StreamWriter( $stream )
-            $buffer = New-Object System.Byte[] 1024
+            $buffer = New-Object System.Byte[] $tcpClient.ReceiveBufferSize
             $encoding = New-Object System.Text.AsciiEncoding
             $IpString = [System.Text.StringBuilder]::new()
 
-            streamDataWaiter -stream $stream
+            #streamDataWaiter -stream $stream
      
-            while ($stream.DataAvailable) {
-                $read = $stream.Read( $buffer, 0, 1024 )
-                $SecurityChallenge = $encoding.GetString( $buffer, 0, $read )
-                Write-Verbose "Security Challenge $SecurityChallenge"
-            }
+            $read = $stream.Read( $buffer, 0, $tcpClient.ReceiveBufferSize )
+            $SecurityChallenge = $encoding.GetString( $buffer, 0, $read )
+            Write-Verbose "Security Challenge $SecurityChallenge"
 
-            #One time I had to wait for the stream to become writable. 
-            while ($stream.CanWrite -eq $false) {
-                Write-Verbose "waiting for stream to be writeable"
-                Start-Sleep -m 10
-            }
-        
             <#
             If the security challenge is 'wookie', we know the validation of that challenge we have to send back is '2/TYFMRc'
             Implementing gsmsalg is how you would get the correct validation for different keys.
@@ -149,18 +143,18 @@ function Get-UtMasterServerEndpointList {
                 $writer.Flush( )
                 #sometimes, this loop gets stuck here. I need to fix this. maybe with a timeout? 
                 #Adding the sleep above seemed to fix the issue, but it's not a good implementation.
-                streamDataWaiter -stream $stream
 
-                while ( $stream.DataAvailable ) {
+                do {
                     Write-Verbose "Receiving List of Endpoints"
-                    $read = $stream.Read( $buffer, 0, 1024 )
+                    $read = $stream.Read( $buffer, 0, $tcpClient.ReceiveBufferSize )
                     $IpString.Append($encoding.GetString( $buffer, 0, $read )) | Out-Null
             
                     while ($stream.DataAvailable -eq $false) {
                         if ($IpString.tostring() -match 'final') { break }
+                        Write-Verbose "hit sleep at line 154"
                         Start-Sleep -m 10
                     }
-                }
+                }while ( $stream.DataAvailable ) 
                 Write-Verbose "Processing Ip Address List."
                 $IpString = $IpString.ToString().Split('\final')[0]
                 $IpString.Split('\ip\', [StringSplitOptions]::RemoveEmptyEntries).ForEach( { [IPEndpoint]::Parse($_) | Write-Output })
@@ -171,8 +165,14 @@ function Get-UtMasterServerEndpointList {
         
     
         } finally {
-            if ( $writer ) {	$writer.Close( )	}
-            if ( $stream ) {	$stream.Close( )	}
+            if ( $writer ) {	
+                $writer.Close( )	
+                $writer.Dispose()
+            }
+            if ( $stream ) {	
+                $stream.Close( )
+                $stream.Dispose()
+            }
         } 
     }
     end {}
