@@ -22,9 +22,15 @@ This cmdlet allows you to test two things
 1. The master server address and port number are responding to connections.
 2. The list of IP addresses is retrievable and your game server's IP address is on that list.
 
+## Find-UtLanServers
+
+Find one or many UT Servers on a LAN. Mimics the client by broadcasting UDP packets on ports 8777-8786 and waiting for responses. 
+
+## Invoke-UtServerQuery
+Query a server to get infomation like, server name, map name, number of players, etc. 
 
 # Contributing
 Please feel free to help out by either creating issues, or solving them. 
 
 # Kudos
-Documentation and Code on Unreal can be found here: https://www.etc.cmu.edu/projects/coyote210/Docs/undox/IpServer.UdpServerUplink.html#L22
+Documentation and Code on Unreal Tournament can be found here: https://www.etc.cmu.edu/projects/coyote210/Docs/undox/IpServer.UdpServerUplink.html#L22
