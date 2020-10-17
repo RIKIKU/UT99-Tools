@@ -23,5 +23,5 @@ This cmdlet allows you to test two things
 2. The list of IP addresses is retrievable and your game server's IP address is on that list.
 
 
-#Contributing
+# Contributing
 Please feel free to help out by either creating issues, or solving them. 
