@@ -26,8 +26,9 @@ jobs:
         uses: Amadevus/pwsh-script@v2.0.0
         with:
           # PowerShell script to execute in Actions-hydrated context
-          script: $moduleDir = . build\build.ps1
-
+          script: |
+            $moduleDir = . build\build.ps1
+            Set-ActionVariable MODULE_DIR $moduleDir
 
       - name: Publish PowerShell Module
           # You may pin to the exact commit or the version.
@@ -35,6 +36,6 @@ jobs:
         uses: pcgeek86/publish-powershell-module-action@v19
         with:
           # The filesystem path to the module to import into the environment.
-          modulePath: 
+          modulePath: MODULE_DIR
           # The NuGet API Key for PowerShell Gallery, with permission to push this module.
           NuGetApiKey: 
