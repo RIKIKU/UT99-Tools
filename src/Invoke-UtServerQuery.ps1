@@ -98,8 +98,10 @@ function Invoke-UtServerQuery {
                 Write-Verbose "Host $($respondentEndpoint.ToString()) Didn't respond."
             }
         } finally {
-            $UtServerUtpClient.Close()
-            $UtServerUtpClient.Dispose()
+            if ($UtServerUtpClient) {
+                $UtServerUtpClient.Close()
+                $UtServerUtpClient.Dispose()
+            }
         }
 
         if ($returnData) {
