@@ -37,7 +37,7 @@
             Tags         = @('tools' )
 
             # What software license is your code being released under? (see https://opensource.org/licenses)
-            LicenseUri   = 'MIT'
+            LicenseUri   = 'https://github.com/RIKIKU/UT99-Tools/blob/main/LICENSE'
 
             # What is the URL to your project's website?
             ProjectUri   = 'https://github.com/RIKIKU/UT99-Tools'
