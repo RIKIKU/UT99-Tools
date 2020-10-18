@@ -35,6 +35,6 @@ jobs:
         uses: pcgeek86/publish-powershell-module-action@v19
         with:
           # The filesystem path to the module to import into the environment.
-          modulePath: .\staging\ut99tools
+          modulePath: ./staging/ut99tools
           # The NuGet API Key for PowerShell Gallery, with permission to push this module.
           NuGetApiKey: PsGalleryPublishKey
