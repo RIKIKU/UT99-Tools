@@ -1,6 +1,9 @@
 # UT99-Tools
 PowerShell tools for troubleshooting Unreal Tournament 99 Servers.
 
+# Installing
+
+`Install-Module -Name Ut99Tools -Scope CurrentUser`
 
 # Cmdlets
 
