@@ -16,7 +16,7 @@
     Description          = 'For troubleshooting UT 99 servers.'
 
     # Minimum PowerShell version supported by this module (optional, recommended)
-    # PowerShellVersion = ''
+    PowerShellVersion    = '5.1'
 
     # Which PowerShell Editions does this module work with? (Core, Desktop)
     CompatiblePSEditions = @('Desktop', 'Core')
