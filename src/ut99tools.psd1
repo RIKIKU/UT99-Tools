@@ -1,6 +1,6 @@
 @{
     # If authoring a script module, the RootModule is the name of your .psm1 file
-    RootModule           = 'ut99tools.psm1'
+    RootModule           = 'Ut99Tools.psm1'
 
     Author               = 'Kyle Smith'
 
