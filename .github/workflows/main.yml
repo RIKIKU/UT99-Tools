@@ -37,4 +37,4 @@ jobs:
           # The filesystem path to the module to import into the environment.
           modulePath: staging/ut99tools
           # The NuGet API Key for PowerShell Gallery, with permission to push this module.
-          NuGetApiKey: PsGalleryPublishKey
+          NuGetApiKey: ${{ secrets.PSGALLERYPUBLISHKEY }}
