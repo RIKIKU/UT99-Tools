@@ -1,4 +1,23 @@
+
 function Find-UtLanServers {
+    <#
+        .SYNOPSIS
+            Find UT Servers on a Lan and write their response to the pipeline. 
+        .DESCRIPTION
+            Mimics the behavior of the UT client when a user selects the "Find LAN games option" by sending out broadcast packets to ports 8777-8786 and reading the responses it recieves.
+        .EXAMPLE
+            PS C:\> Find-UtLanServers
+            
+            GameType QueryPort Address
+            -------- --------- -------
+            ut       7778      192.168.0.6
+
+            Running the Cmdlet will find all servers that are listening on the correct port range and output the above result.
+        .INPUTS
+            
+        .OUTPUTS
+            PsCustomObject
+    #>
     try {
         
         $udpClient = New-Object System.Net.Sockets.UdpClient
