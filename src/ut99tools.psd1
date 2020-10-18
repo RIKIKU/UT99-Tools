@@ -6,14 +6,14 @@
 
     CompanyName          = ''
 
-    ModuleVersion        = '0.1'
+    ModuleVersion        = '0.1.0'
 
     # Use the New-Guid command to generate a GUID, and copy/paste into the next line
     GUID                 = '21d63488-5157-47f1-b3aa-d692f7e61078'
 
     Copyright            = ''
 
-    Description          = 'For troubleshooting UT 99 server problems. '
+    Description          = 'For troubleshooting UT 99 servers.'
 
     # Minimum PowerShell version supported by this module (optional, recommended)
     # PowerShellVersion = ''
