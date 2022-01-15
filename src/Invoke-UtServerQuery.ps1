@@ -1,50 +1,50 @@
 
 function Invoke-UtServerQuery {
     <#
-        .SYNOPSIS
-            Send a query to a UT Game Server.
-        .DESCRIPTION
-            Send a query message to a Game Server's query port (game port + 1). 
-            This will retrieve the type of information that's usually visible in the game "Find Internet Games window" and more.
-        .EXAMPLE
-            PS C:\> Find-UtLanServers | Invoke-UtServerQuery
+    .SYNOPSIS
+        Send a query to a UT Game Server.
+    .DESCRIPTION
+        Send a query message to a Game Server's query port (game port + 1). 
+        This will retrieve the type of information that's usually visible in the game "Find Internet Games window" and more.
+    .EXAMPLE
+        PS C:\> Find-UtLanServers | Invoke-UtServerQuery
 
-            hostaddress  : 192.168.0.6
-            hostport     : 7777
-            worldlog     : false
-            maptitle     : Frigate
-            maxplayers   : 16
-            gamemode     : openplaying
-            gametype     : Assault
-            mapname      : AS-Frigate
-            hostname     : Testing UT Server In Docker
-            wantworldlog : false
-            minnetver    : 432
-            queryid      : 5.1
-            numplayers   : 1
-            gamever      : 451
+        hostaddress  : 192.168.0.6
+        hostport     : 7777
+        worldlog     : false
+        maptitle     : Frigate
+        maxplayers   : 16
+        gamemode     : openplaying
+        gametype     : Assault
+        mapname      : AS-Frigate
+        hostname     : Testing UT Server In Docker
+        wantworldlog : false
+        minnetver    : 432
+        queryid      : 5.1
+        numplayers   : 1
+        gamever      : 451
 
-            In this example, Find-UtLanServers  locates a server on the LAN and Invoke-UtServerQuery performs the info query on it.. 
+        In this example, Find-UtLanServers  locates a server on the LAN and Invoke-UtServerQuery performs the info query on it.. 
 
-        .EXAMPLE
-            PS C:\> Get-UtMasterServerEndpointList -Address utmaster.epicgames.com | where Address -eq '181.43.152.180'  | Invoke-UtServerQuery -QueryType rules | select hostname,mapname,numplayers
-            
-            hostname                           mapname    numplayers
-            --------                           -------    ----------
-            [Ragnarok] Heimdall - DM 1v1 - ip2 CTF-Lucius 0
-            [Ragnarok] Odin - [Pug] ip3        CTF-Lucius 0
-            [Ragnarok] Thor - [Pug] ip4        CTF-Lucius 0
-            [Ragnarok] Tyr - CTF/DM Publico -… CTF-Novem… 0
-            [Ragnarok] Loki - [Pug] ip5 OldCo… CTF-Incin… 0
+    .EXAMPLE
+        PS C:\> Get-UtMasterServerEndpointList -Address utmaster.epicgames.com | where Address -eq '181.43.152.180'  | Invoke-UtServerQuery -QueryType rules | select hostname,mapname,numplayers
+        
+        hostname                           mapname    numplayers
+        --------                           -------    ----------
+        [Ragnarok] Heimdall - DM 1v1 - ip2 CTF-Lucius 0
+        [Ragnarok] Odin - [Pug] ip3        CTF-Lucius 0
+        [Ragnarok] Thor - [Pug] ip4        CTF-Lucius 0
+        [Ragnarok] Tyr - CTF/DM Publico -… CTF-Novem… 0
+        [Ragnarok] Loki - [Pug] ip5 OldCo… CTF-Incin… 0
 
-            In this example, we query the master server for a list of game servers, then filter the list to only IP addresses that match '181.43.152.180' and query only those servers. 
-            Then we filter the output to only show hostname, mapname and numplayers.
-        .INPUTS
-            String, Int
-        .OUTPUTS
-            PSCustomObject
-        .NOTES
-            General notes
+        In this example, we query the master server for a list of game servers, then filter the list to only IP addresses that match '181.43.152.180' and query only those servers. 
+        Then we filter the output to only show hostname, mapname and numplayers.
+    .INPUTS
+        String, Int
+    .OUTPUTS
+        PSCustomObject
+    .NOTES
+        General notes
     #>
     [CmdletBinding()]
     param (
@@ -82,14 +82,17 @@ function Invoke-UtServerQuery {
 
             $UtServerUtpClient.Client.SendTimeout = 2000
             $UtServerUtpClient.Client.ReceiveTimeout = 5000
+            Write-Verbose "Connecting to server"
             $UtServerUtpClient.Connect($respondentEndpoint)
 
             $encoding = [System.Text.AsciiEncoding]::new()
 
             $query = '\{0}\' -f $QueryType
             [Byte[]] $sendInfoBytes = $encoding.GetBytes($query);
+            Write-Verbose "Sending query"
             $UtServerUtpClient.Send($sendInfoBytes, $sendInfoBytes.Length) | Out-Null
 
+            Write-Verbose "Attempting to receive response"
             [Byte[]] $receiveBytes = $UtServerUtpClient.Receive([ref]$respondentEndpoint)
             $returnData = $encoding.GetString($receiveBytes) 
 
@@ -114,7 +117,7 @@ function Invoke-UtServerQuery {
             Write-Verbose "Server Response:  $returnData "
 
             #remove leading \ or \\ depending.
-            
+            Write-Verbose "Processing response"
             $returnData = $returnData.Substring(1, $returnData.Length - 1)
             if ($returnData.Substring(0, 2) -eq '\\') {
                 $returnData = $returnData.Substring(2, $returnData.Length - 2)
