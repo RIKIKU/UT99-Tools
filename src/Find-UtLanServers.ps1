@@ -18,6 +18,8 @@ function Find-UtLanServers {
         .OUTPUTS
             PsCustomObject
     #>
+    [CmdletBinding()]
+    param ()
     try {
         
         $udpClient = New-Object System.Net.Sockets.UdpClient
@@ -28,14 +30,18 @@ function Find-UtLanServers {
     
         #fishing for servers on the network.
         [Byte[]] $sendQueryBytes = $encoding.GetBytes("REPORTQUERY");
-        8777..8786 | ForEach-Object { $udpClient.Send($sendQueryBytes, $sendQueryBytes.Length, [IPEndPoint]::new([IPAddress]::Broadcast, $_)) | Out-Null }
+        8777..8786 | ForEach-Object { 
+            Write-Verbose "Sending broadcast message REPORTQUERY to port  $_"
+            $udpClient.Send($sendQueryBytes, $sendQueryBytes.Length, [IPEndPoint]::new([IPAddress]::Broadcast, $_)) | Out-Null }
         
         while ($true) {
+            Write-Verbose "Waiting for responses"
             $ServerEndpoint = [IPEndpoint]::new([ipaddress]::Any, 0)
             [Byte[]] $receiveBytes = $udpClient.Receive([ref]$ServerEndpoint)
             [string] $returnData = $encoding.GetString($receiveBytes);
     
             if ($returnData) {
+                Write-Verbose "Response received"
                 $output = [PSCustomObject]@{
                     GameType  = $returnData.Split(' ')[0]
                     QueryPort = $returnData.Split(' ')[1]
