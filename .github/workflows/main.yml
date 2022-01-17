@@ -36,6 +36,6 @@ jobs:
         uses: pcgeek86/publish-powershell-module-action@v20
         with:
           # The filesystem path to the module to import into the environment.
-          modulePath: ${{ env.StagingDir }}
+          modulePath: /home/runner/work/UT99-Tools/UT99-Tools/staging/Ut99Tools
           # The NuGet API Key for PowerShell Gallery, with permission to push this module.
           NuGetApiKey: ${{ secrets.PSGALLERYPUBLISHKEY }}
