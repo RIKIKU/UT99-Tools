@@ -6,5 +6,3 @@ New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
 Get-ChildItem -Path "$SourceFolder/*.ps1" -Recurse | Get-Content | Out-File -FilePath "$OutputPath\$ModuleName.psm1"
 Copy-Item "$SourceFolder/*" -Recurse -Exclude '*.ps1' -Destination $OutputPath
 $OutputPath | Write-Output 
-
-Write-Host "::set-env name=StagingDir::$OutputPath"
