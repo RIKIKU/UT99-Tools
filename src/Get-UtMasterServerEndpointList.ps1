@@ -34,13 +34,21 @@ function Get-UtMasterServerEndpointList {
 
         .EXAMPLE
             PS C:\> Get-UtMasterServerEndpointList -Address master.333networks.com
-            
-            The challenge received from the server was \basic\\secure\HZVXFR\final\.  
-            This cmdlet can't handle any key other than the one used by epic servers.
 
-            In this example, the address for a master server was given where the challenge was outside of the capabilities of this cmdlet (for now).
-            However, it did respond with a challenge which is shown in the host output, which means the server is there and responding to connections.
-            This is a way you can test master servers to see if they are responding to requests. 
+            AddressFamily Address          Port
+            ------------- -------          ----
+            InterNetwork 147.135.23.65    7978
+            InterNetwork 216.155.140.138  7778
+
+            The cmdlet solves the server's secure challenge with the GameSpy algorithm (gsmsalg),
+            so any master server that speaks the GameSpy 'secure' protocol for Unreal Tournament
+            (gamename 'ut') will return its endpoint list.
+        .EXAMPLE
+            PS C:\> Get-UtMasterServerEndpointList -Address master.oldunreal.com -GameName ut -GameKey Z5Nfb0
+
+            Supplying an explicit -GameName and -GameKey lets you query master servers for other
+            GameSpy titles. The defaults ('ut' / 'Z5Nfb0') target Unreal Tournament, so they can
+            be omitted for UT master servers.
         .EXAMPLE
             PS C:\> Get-UtMasterServerEndpointList -Address unreal.epicgames.com | where Address -eq '181.43.152.180'
             
@@ -58,8 +66,10 @@ function Get-UtMasterServerEndpointList {
         .OUTPUTS
             object[] or System.Net.IPEndpoint
         .NOTES
-            Known issues:
-                - The cmdlet will only download IPEndpoints from servers that use the challenge '\basic\\secure\wookie' 
+            The master server's secure challenge is solved at runtime using the GameSpy master
+            server algorithm (gsmsalg, enctype 0) keyed with the game key, so servers that issue
+            different challenges are supported. Only the plain-text enctype 0 handshake used by
+            Unreal Tournament master servers is implemented.
         .LINK
             https://github.com/RIKIKU/UT99-Tools
     #>
@@ -72,7 +82,15 @@ function Get-UtMasterServerEndpointList {
         # Port number to connect to the server on. Default 28900
         [Parameter(Mandatory = $false)]
         [int]
-        $Port = 28900 
+        $Port = 28900,
+        # GameSpy game name announced in the list request. Default 'ut' (Unreal Tournament).
+        [Parameter(Mandatory = $false)]
+        [string]
+        $GameName = 'ut',
+        # GameSpy game key used to solve the master server's secure challenge. Default is the Unreal Tournament ('ut') key.
+        [Parameter(Mandatory = $false)]
+        [string]
+        $GameKey = 'Z5Nfb0'
     )
     begin {
         #region helpy helpertons
@@ -104,6 +122,79 @@ function Get-UtMasterServerEndpointList {
             }
         }
 
+        function computeGsSecureResponse {
+            <#
+                .SYNOPSIS
+                    Solves a GameSpy 'secure' challenge (gsmsalg, enctype 0) using the game key.
+            #>
+            [CmdletBinding()]
+            param (
+                # The challenge string sent by the master server (the value following '\secure\').
+                [Parameter(Mandatory = $true)]
+                [string]
+                $Challenge,
+                # The GameSpy game key used to validate the challenge.
+                [Parameter(Mandatory = $true)]
+                [string]
+                $GameKey
+            )
+
+            # Maps a 6-bit value to a GameSpy base64-style output character (returns its ASCII code).
+            function gsvalfunc([int]$reg) {
+                if ($reg -lt 26) { return ($reg + 65) }
+                if ($reg -lt 52) { return ($reg + 71) }
+                if ($reg -lt 62) { return ($reg - 4) }
+                if ($reg -eq 62) { return 43 }
+                if ($reg -eq 63) { return 47 }
+                return 0
+            }
+
+            $encoder = [System.Text.Encoding]::ASCII
+            $src = $encoder.GetBytes($Challenge)
+            $key = $encoder.GetBytes($GameKey)
+
+            # Key-scheduling: build the initial permutation from the game key.
+            $enctmp = New-Object 'int[]' 256
+            for ($i = 0; $i -lt 256; $i++) { $enctmp[$i] = $i }
+            $a = 0
+            for ($i = 0; $i -lt 256; $i++) {
+                $a = ($a + $enctmp[$i] + $key[$i % $key.Length]) -band 0xff
+                $swap = $enctmp[$a]
+                $enctmp[$a] = $enctmp[$i]
+                $enctmp[$i] = $swap
+            }
+
+            # Encrypt the challenge, then zero-pad the buffer to a multiple of three bytes.
+            $tmp = New-Object 'int[]' 66
+            $a = 0
+            $b = 0
+            for ($i = 0; $i -lt $src.Length; $i++) {
+                $a = ($a + $src[$i] + 1) -band 0xff
+                $x = $enctmp[$a]
+                $b = ($b + $x) -band 0xff
+                $y = $enctmp[$b]
+                $enctmp[$b] = $x
+                $enctmp[$a] = $y
+                $tmp[$i] = $src[$i] -bxor $enctmp[($x + $y) -band 0xff]
+            }
+            for ($size = $i; ($size % 3) -ne 0; $size++) {
+                $tmp[$size] = 0
+            }
+
+            # Emit the response as GameSpy base64 (4 output chars per 3 input bytes).
+            $sb = [System.Text.StringBuilder]::new()
+            for ($i = 0; $i -lt $size; $i += 3) {
+                $x = $tmp[$i]
+                $y = $tmp[$i + 1]
+                $z = $tmp[$i + 2]
+                [void]$sb.Append([char](gsvalfunc ($x -shr 2)))
+                [void]$sb.Append([char](gsvalfunc ((($x -band 3) -shl 4) -bor ($y -shr 4))))
+                [void]$sb.Append([char](gsvalfunc ((($y -band 15) -shl 2) -bor ($z -shr 6))))
+                [void]$sb.Append([char](gsvalfunc ($z -band 63)))
+            }
+            $sb.ToString()
+        }
+
         #endregion
 
     }
@@ -133,34 +224,40 @@ function Get-UtMasterServerEndpointList {
             Write-Verbose "Security Challenge $SecurityChallenge"
 
             <#
-            If the security challenge is 'wookie', we know the validation of that challenge we have to send back is '2/TYFMRc'
-            Implementing gsmsalg is how you would get the correct validation for different keys.
+            The master server opens with '\basic\\secure\<challenge>'. The <challenge> is solved
+            with the GameSpy master server algorithm (gsmsalg, enctype 0) keyed with the game key,
+            producing the '\validate\' token the server expects. See computeGsSecureResponse.
             #>
-            if ($SecurityChallenge -eq '\basic\\secure\wookie') {
-            
-                Write-Verbose "Sending request for ip address list"
-                $writer.WriteLine("\gamename\ut\location\0\validate\2/TYFMRc\final\\list\gamename\ut\")
-                $writer.Flush( )
-                #sometimes, this loop gets stuck here. I need to fix this. maybe with a timeout? 
-                #Adding the sleep above seemed to fix the issue, but it's not a good implementation.
-
-                do {
-                    Write-Verbose "Receiving List of Endpoints"
-                    $read = $stream.Read( $buffer, 0, $tcpClient.ReceiveBufferSize )
-                    $IpString.Append($encoding.GetString( $buffer, 0, $read )) | Out-Null
-            
-                    while ($stream.DataAvailable -eq $false) {
-                        if ($IpString.tostring() -match 'final') { break }
-                        Write-Verbose "waiting for data"
-                        Start-Sleep -m 20
-                    }
-                }while ( $stream.DataAvailable ) 
-                Write-Verbose "Processing Ip Address List."
-                $IpString = $IpString.ToString().Split('\final')[0]
-                $IpString.Split('\ip\', [StringSplitOptions]::RemoveEmptyEntries).ForEach( { [IPEndpoint]::Parse($_) | Write-Output })
-            } else {
-                Write-Host "The challenge received from the server was $SecurityChallenge`nThis cmdlet can't handle any challenge other than the one used by epic servers."
+            $challengeMatch = [regex]::Match($SecurityChallenge, '\\secure\\([^\\]+)')
+            if (-not $challengeMatch.Success) {
+                Write-Error "Unexpected handshake from server. Expected a '\secure\' challenge but received: $SecurityChallenge" -ErrorAction Stop
             }
+            $challengeValue = $challengeMatch.Groups[1].Value
+            Write-Verbose "Parsed secure challenge '$challengeValue'"
+
+            $validate = computeGsSecureResponse -Challenge $challengeValue -GameKey $GameKey
+            Write-Verbose "Computed validate response '$validate'"
+
+            Write-Verbose "Sending request for ip address list"
+            $writer.WriteLine("\gamename\$GameName\location\0\validate\$validate\final\\list\gamename\$GameName\")
+            $writer.Flush( )
+            #sometimes, this loop gets stuck here. I need to fix this. maybe with a timeout? 
+            #Adding the sleep above seemed to fix the issue, but it's not a good implementation.
+
+            do {
+                Write-Verbose "Receiving List of Endpoints"
+                $read = $stream.Read( $buffer, 0, $tcpClient.ReceiveBufferSize )
+                $IpString.Append($encoding.GetString( $buffer, 0, $read )) | Out-Null
+        
+                while ($stream.DataAvailable -eq $false) {
+                    if ($IpString.tostring() -match 'final') { break }
+                    Write-Verbose "waiting for data"
+                    Start-Sleep -m 20
+                }
+            }while ( $stream.DataAvailable ) 
+            Write-Verbose "Processing Ip Address List."
+            $IpString = $IpString.ToString().Split('\final')[0]
+            $IpString.Split('\ip\', [StringSplitOptions]::RemoveEmptyEntries).ForEach( { [IPEndpoint]::Parse($_) | Write-Output })
         } finally {
             if ( $writer ) {	
                 $writer.Close( )	
